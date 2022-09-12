@@ -33,8 +33,13 @@
             overflow: auto;
         }
 
-        .chating p {
-            color: #fff;
+        .chating .me {
+            color: #F6F6F6;
+            text-align: right;
+        }
+
+        .chating .others {
+            color: #FFE400;
             text-align: left;
         }
 
@@ -53,19 +58,36 @@
     var ws;
 
     function wsOpen() {
-        ws = new WebSocket("ws://" + location.host + "/chating");
+        //웹소켓 전송시 현재 방의 번호를 넘겨서 보낸다.
+        ws = new WebSocket("ws://" + location.host + "/chating/" + $("#roomNumber").val());
         wsEvt();
     }
 
     function wsEvt() {
         ws.onopen = function (data) {
-            //소켓이 열리면 초기화 세팅하기
+            //소켓이 열리면 동작
         }
 
         ws.onmessage = function (data) {
+            //메시지를 받으면 동작
             var msg = data.data;
             if (msg != null && msg.trim() != '') {
-                $("#chating").append("<p>" + msg + "</p>");
+                var d = JSON.parse(msg);
+                if (d.type == "getId") {
+                    var si = d.sessionId != null ? d.sessionId : "";
+                    if (si != '') {
+                        $("#sessionId").val(si);
+                    }
+                } else if (d.type == "message") {
+                    if (d.sessionId == $("#sessionId").val()) {
+                        $("#chating").append("<p class='me'>나 :" + d.msg + "</p>");
+                    } else {
+                        $("#chating").append("<p class='others'>" + d.userName + " :" + d.msg + "</p>");
+                    }
+
+                } else {
+                    console.warn("unknown type!")
+                }
             }
         }
 
@@ -89,15 +111,23 @@
     }
 
     function send() {
-        var uN = $("#userName").val();
-        var msg = $("#chatting").val();
-        ws.send(uN + " : " + msg);
+        var option = {
+            type: "message",
+            roomNumber: $("#roomNumber").val(),
+            sessionId: $("#sessionId").val(),
+            userName: $("#userName").val(),
+            msg: $("#chatting").val()
+        }
+        ws.send(JSON.stringify(option))
         $('#chatting').val("");
     }
 </script>
 <body>
 <div id="container" class="container">
-    <h1>채팅</h1>
+    <h1>${roomName}의 채팅방</h1>
+    <input type="hidden" id="sessionId" value="">
+    <input type="hidden" id="roomNumber" value="${roomNumber}">
+
     <div id="chating" class="chating">
     </div>
 
